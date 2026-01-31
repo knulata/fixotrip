@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FixoTrip - Flight Cancelled? Luggage Lost? We Fix It NOW</title>
+    <meta name="description" content="Stuck at the airport? Flight cancelled? Luggage lost? Get real-time help on WhatsApp. We tell you exactly what to say and do. First consultation FREE.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #1a1a1a;
+            line-height: 1.6;
+        }
+
+        /* Urgency Banner */
+        .urgency-banner {
+            background: #dc2626;
+            color: white;
+            text-align: center;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .urgency-banner span {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+            color: white;
+            padding: 60px 20px 80px;
+            text-align: center;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: #22c55e;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 25px;
+            animation: pulse 2s infinite;
+        }
+
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero h1 .highlight {
+            color: #fbbf24;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 35px;
+            flex-wrap: wrap;
+        }
+
+        .hero-stat {
+            text-align: center;
+        }
+
+        .hero-stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #22c55e;
+        }
+
+        .hero-stat-label {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: #22c55e;
+            color: white;
+            padding: 20px 40px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            font-weight: 700;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4);
+        }
+
+        .cta-button:hover {
+            background: #16a34a;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(34, 197, 94, 0.5);
+        }
+
+        .cta-subtext {
+            margin-top: 15px;
+            font-size: 0.95rem;
+            opacity: 0.8;
+        }
+
+        /* Problem Selector */
+        .problems-section {
+            padding: 60px 20px;
+            background: #f8fafc;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
+        .problems-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .problem-card {
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .problem-card:hover {
+            border-color: #22c55e;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transform: translateY(-3px);
+        }
+
+        .problem-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .problem-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+        }
+
+        .problem-card p {
+            color: #64748b;
+            font-size: 0.95rem;
+        }
+
+        .problem-card .arrow {
+            color: #22c55e;
+            font-weight: 600;
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* How It Works */
+        .how-section {
+            padding: 80px 20px;
+            background: white;
+        }
+
+        .steps-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .step {
+            display: flex;
+            gap: 25px;
+            margin-bottom: 40px;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background: #0f172a;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+        }
+
+        .step-content p {
+            color: #64748b;
+        }
+
+        .step-example {
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.95rem;
+            color: #166534;
+        }
+
+        /* Social Proof */
+        .social-proof {
+            padding: 80px 20px;
+            background: #0f172a;
+            color: white;
+        }
+
+        .social-proof .section-title {
+            color: white;
+        }
+
+        .social-proof .section-subtitle {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .testimonials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .testimonial {
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 30px;
+        }
+
+        .testimonial-text {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .author-avatar {
+            width: 45px;
+            height: 45px;
+            background: #22c55e;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .author-name {
+            font-weight: 600;
+        }
+
+        .author-location {
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+
+        .testimonial-result {
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 15px;
+            display: inline-block;
+        }
+
+        /* Pricing */
+        .pricing-section {
+            padding: 80px 20px;
+            background: #f8fafc;
+        }
+
+        .pricing-box {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 3px solid #22c55e;
+        }
+
+        .pricing-badge {
+            background: #22c55e;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .pricing-main {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 5px;
+        }
+
+        .pricing-sub {
+            color: #64748b;
+            margin-bottom: 25px;
+        }
+
+        .pricing-features {
+            text-align: left;
+            margin-bottom: 30px;
+        }
+
+        .pricing-features li {
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .pricing-features li:last-child {
+            border-bottom: none;
+        }
+
+        .pricing-features .check {
+            color: #22c55e;
+            font-weight: 700;
+        }
+
+        .pricing-note {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            margin-top: 20px;
+        }
+
+        /* FAQ */
+        .faq-section {
+            padding: 80px 20px;
+            background: white;
+        }
+
+        .faq-list {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .faq-item {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 25px 0;
+        }
+
+        .faq-question {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: #0f172a;
+        }
+
+        .faq-answer {
+            color: #64748b;
+        }
+
+        /* Final CTA */
+        .final-cta {
+            padding: 100px 20px;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .final-cta h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+        }
+
+        .final-cta p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 30px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .final-cta .cta-button {
+            background: white;
+            color: #dc2626;
+        }
+
+        .final-cta .cta-button:hover {
+            background: #f8fafc;
+        }
+
+        .guarantee {
+            margin-top: 25px;
+            font-size: 0.95rem;
+            opacity: 0.9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* Footer */
+        footer {
+            background: #0f172a;
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        footer a {
+            color: #22c55e;
+            text-decoration: none;
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero-stats {
+                gap: 25px;
+            }
+
+            .cta-button {
+                padding: 18px 30px;
+                font-size: 1.1rem;
+            }
+
+            .step {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .step-number {
+                margin: 0 auto;
+            }
+
+            .final-cta h2 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Urgency Banner -->
+    <div class="urgency-banner">
+        <span>🚨 Travel Emergency? We respond in under 3 minutes — 24/7</span>
+    </div>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-badge">✓ First Consultation FREE</div>
+        <h1>Flight Cancelled? Luggage Lost? <span class="highlight">We Fix It NOW.</span></h1>
+        <p>Stuck at the airport with no help? Message us on WhatsApp and we'll tell you exactly what to say and do — step by step.</p>
+
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="hero-stat-number">2,847</div>
+                <div class="hero-stat-label">Travelers Helped</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-number">&lt;3 min</div>
+                <div class="hero-stat-label">Response Time</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-number">94%</div>
+                <div class="hero-stat-label">Success Rate</div>
+            </div>
+        </div>
+
+        <a href="https://wa.me/628131102445?text=Hi%2C%20I%20need%20help%20with%20a%20travel%20emergency!" class="cta-button">
+            <span>💬</span> Get Help Now — It's Free
+        </a>
+        <p class="cta-subtext">No app download needed. Just WhatsApp.</p>
+    </section>
+
+    <!-- Problem Selector -->
+    <section class="problems-section">
+        <h2 class="section-title">What's Your Emergency?</h2>
+        <p class="section-subtitle">Tap your problem — we'll fix it together</p>
+
+        <div class="problems-grid">
+            <a href="https://wa.me/628131102445?text=My%20flight%20was%20cancelled%20and%20I%20need%20help!" class="problem-card">
+                <div class="problem-icon">✈️</div>
+                <h3>Flight Cancelled / Delayed</h3>
+                <p>Airline won't help? We'll get you rebooked or compensated.</p>
+                <div class="arrow">Get help now →</div>
+            </a>
+
+            <a href="https://wa.me/628131102445?text=My%20luggage%20is%20lost%20or%20delayed!" class="problem-card">
+                <div class="problem-icon">🧳</div>
+                <h3>Lost / Delayed Luggage</h3>
+                <p>File the right claim, track your bag, get emergency cash.</p>
+                <div class="arrow">Get help now →</div>
+            </a>
+
+            <a href="https://wa.me/628131102445?text=I%20have%20a%20hotel%20or%20Airbnb%20problem!" class="problem-card">
+                <div class="problem-icon">🏨</div>
+                <h3>Hotel / Airbnb Problem</h3>
+                <p>Overbooked? Room not as advertised? We'll fix it.</p>
+                <div class="arrow">Get help now →</div>
+            </a>
+
+            <a href="https://wa.me/628131102445?text=I%20missed%20my%20connection%20and%20need%20help!" class="problem-card">
+                <div class="problem-icon">🏃</div>
+                <h3>Missed Connection</h3>
+                <p>Stuck between flights? We'll get you on the next one.</p>
+                <div class="arrow">Get help now →</div>
+            </a>
+
+            <a href="https://wa.me/628131102445?text=I%20was%20denied%20boarding!" class="problem-card">
+                <div class="problem-icon">🚫</div>
+                <h3>Denied Boarding</h3>
+                <p>Bumped from your flight? You're owed compensation.</p>
+                <div class="arrow">Get help now →</div>
+            </a>
+
+            <a href="https://wa.me/628131102445?text=I%20have%20another%20travel%20emergency!" class="problem-card">
+                <div class="problem-icon">🆘</div>
+                <h3>Other Emergency</h3>
+                <p>Visa issue? Scam? Anything else — we help with it all.</p>
+                <div class="arrow">Get help now →</div>
+            </a>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-section">
+        <h2 class="section-title">How FixoTrip Works</h2>
+        <p class="section-subtitle">From panic to solved in 3 simple steps</p>
+
+        <div class="steps-container">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Message Us Your Problem</h3>
+                    <p>Open WhatsApp and tell us what happened. Include your airline, flight number, and what went wrong.</p>
+                    <div class="step-example">
+                        "My United flight UA123 from LAX to Tokyo was just cancelled. Airline says no flights until tomorrow. Help!"
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Get Your Action Plan</h3>
+                    <p>Within minutes, we send you exactly what to do — word-for-word scripts to use with airline staff, which counter to go to, and your legal rights.</p>
+                    <div class="step-example">
+                        "Go to the United service desk (Gate 54). Say: 'I need to be rebooked on the next available flight. I'm also entitled to meal vouchers under DOT regulations.' Here's what to do if they say no..."
+                    </div>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>We Stay With You Until It's Fixed</h3>
+                    <p>We don't disappear. If the first approach doesn't work, we give you Plan B, C, and D. We stay on WhatsApp until you're sorted.</p>
+                    <div class="step-example">
+                        "They said no? Okay, here's what you say next... Or try the supervisor at the customer service center near baggage claim."
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Social Proof -->
+    <section class="social-proof">
+        <h2 class="section-title">Real Travelers, Real Rescues</h2>
+        <p class="section-subtitle">These people were stuck. Now they're not.</p>
+
+        <div class="testimonials-grid">
+            <div class="testimonial">
+                <p class="testimonial-text">"My flight from London got cancelled at 11pm. Airline staff said 'nothing we can do.' FixoTrip gave me the exact words to say. 20 minutes later I had a hotel voucher AND a morning flight."</p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">J</div>
+                    <div>
+                        <div class="author-name">James K.</div>
+                        <div class="author-location">Stranded at Heathrow</div>
+                    </div>
+                </div>
+                <div class="testimonial-result">✓ Got rebooked + hotel paid</div>
+            </div>
+
+            <div class="testimonial">
+                <p class="testimonial-text">"Luggage didn't arrive in Tokyo. I had a business meeting in 6 hours. FixoTrip told me exactly how to file the claim AND get emergency cash from the airline. Lifesaver."</p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">S</div>
+                    <div>
+                        <div class="author-name">Sarah M.</div>
+                        <div class="author-location">Tokyo Narita</div>
+                    </div>
+                </div>
+                <div class="testimonial-result">✓ Got $200 emergency cash</div>
+            </div>
+
+            <div class="testimonial">
+                <p class="testimonial-text">"Airbnb was nothing like the photos. Host wasn't responding. FixoTrip walked me through getting a full refund through Airbnb's resolution center. Got all my money back."</p>
+                <div class="testimonial-author">
+                    <div class="author-avatar">M</div>
+                    <div>
+                        <div class="author-name">Mike & Lisa</div>
+                        <div class="author-location">Barcelona, Spain</div>
+                    </div>
+                </div>
+                <div class="testimonial-result">✓ Full refund received</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section class="pricing-section">
+        <h2 class="section-title">Simple, Honest Pricing</h2>
+        <p class="section-subtitle">Your first consultation is always free</p>
+
+        <div class="pricing-box">
+            <div class="pricing-badge">Most Popular</div>
+            <div class="pricing-main">FREE</div>
+            <div class="pricing-sub">Your first travel emergency</div>
+
+            <ul class="pricing-features">
+                <li><span class="check">✓</span> Instant response (under 3 min)</li>
+                <li><span class="check">✓</span> Step-by-step action plan</li>
+                <li><span class="check">✓</span> Word-for-word scripts</li>
+                <li><span class="check">✓</span> We stay until it's solved</li>
+                <li><span class="check">✓</span> Works worldwide, 24/7</li>
+            </ul>
+
+            <a href="https://wa.me/628131102445?text=Hi%2C%20I%20need%20help%20with%20a%20travel%20emergency!" class="cta-button" style="width: 100%; justify-content: center;">
+                <span>💬</span> Get Free Help Now
+            </a>
+
+            <div class="pricing-note">
+                <strong>Future emergencies:</strong> After your first free rescue, it's just $19 per incident. But your first one? Totally free. No credit card needed.
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="faq-section">
+        <h2 class="section-title">Common Questions</h2>
+
+        <div class="faq-list">
+            <div class="faq-item">
+                <div class="faq-question">Why is the first consultation free?</div>
+                <div class="faq-answer">We want you to see how helpful we are before you pay anything. Most people come back for future trips. It's our way of building trust.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">How fast will you respond?</div>
+                <div class="faq-answer">Usually under 3 minutes. We know you're stressed and need help NOW. We're available 24/7.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">What if you can't help me?</div>
+                <div class="faq-answer">If we genuinely can't help (very rare), we'll tell you immediately and point you to someone who can. You pay nothing.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">Do I need to download an app?</div>
+                <div class="faq-answer">No. Everything happens on WhatsApp. You already have it. Just tap the button and message us.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">What countries do you cover?</div>
+                <div class="faq-answer">All of them. We've helped travelers in 50+ countries. If you have WhatsApp, we can help you.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question">What makes you different from Googling my problem?</div>
+                <div class="faq-answer">Google gives you generic articles. We give you specific instructions for YOUR situation, YOUR airline, YOUR airport — in real-time. And we stay with you until it's fixed.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="final-cta">
+        <h2>Don't Stay Stuck.</h2>
+        <p>Your first rescue is free. Message us now and let's fix your trip.</p>
+        <a href="https://wa.me/628131102445?text=Hi%2C%20I%20need%20help%20with%20a%20travel%20emergency!" class="cta-button">
+            <span>💬</span> Get Help Now — Free
+        </a>
+        <div class="guarantee">
+            <span>🛡️</span> If we can't help, you pay nothing. Ever.
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 FixoTrip — The Travel Rescue Service</p>
+        <p style="margin-top: 10px; opacity: 0.7;">
+            <a href="https://wa.me/628131102445">WhatsApp Us</a> · Available 24/7 Worldwide
+        </p>
+    </footer>
+</body>
+</html>
