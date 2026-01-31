@@ -147,8 +147,8 @@ Hang tight! 🙏`;
 // Payment instructions
 const PAYMENT_INSTRUCTIONS = `💳 *Payment Instructions*
 
-Please send $19 USD via PayPal:
-👉 paypal.me/fixotrip
+Please send $19 USD via PayPal to:
+👉 knulata@gmail.com
 
 Once payment is confirmed, I'll send your complete rescue plan with:
 • Step-by-step instructions
