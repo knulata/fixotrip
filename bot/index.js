@@ -17,146 +17,160 @@ const conversations = new Map();
 const CATEGORIES = {
   flight: {
     keywords: ['flight', 'cancelled', 'canceled', 'delayed', 'airline', 'boarding', 'missed flight', 'connection', 'layover', 'airport'],
-    response: `✈️ *Flight Emergency*
+    response: `Ugh, flight problems are the worst — but you're in the right place. We deal with these every single day.
 
-I can help with flight issues! To assist you quickly, please share:
+*Quick tip while we get started:* Go to your airline's service desk NOW and ask to be rebooked on the next available flight. Don't wait in the phone queue — the desk is almost always faster.
 
-1️⃣ Airline name
-2️⃣ Flight number
-3️⃣ Date of flight
-4️⃣ What happened (cancelled/delayed/denied boarding)
-5️⃣ Where are you now?
+To build your rescue plan, I need a few details:
 
-Once I have these details, I'll find the best solution for you.
+1. Airline name
+2. Flight number
+3. What happened — cancelled, delayed, denied boarding?
+4. Where are you right now?
 
-💰 *Fee: $19 via PayPal (only if we can help)*`
+*What you'll get for $19:*
+Your personal step-by-step action plan — exactly what to say at the desk, which phone numbers to call, what compensation you're legally owed (most people don't claim this), and a Plan B if the first option falls through.
+
+No charge if we can't help your situation.`
   },
 
   luggage: {
     keywords: ['luggage', 'baggage', 'bag', 'lost', 'delayed bag', 'suitcase', 'missing luggage'],
-    response: `🧳 *Lost/Delayed Luggage*
+    response: `That's so frustrating — but don't worry, most "lost" bags are actually just delayed and show up within 48 hours.
 
-Sorry about your luggage! To help you:
+*Do this right now if you haven't:* Go to your airline's baggage desk (before leaving the airport!) and file a PIR — Property Irregularity Report. This is your proof for compensation later. No PIR = much harder to claim.
 
-1️⃣ Which airline?
-2️⃣ Flight number
-3️⃣ Do you have a PIR number? (Property Irregularity Report from the airline)
-4️⃣ What was in the bag? (brief description)
-5️⃣ Where are you staying?
+To get your full rescue plan, tell me:
 
-I'll guide you through getting compensation and tracking your bag.
+1. Which airline?
+2. Flight number
+3. Did you already file a PIR?
+4. Where are you staying? (so we can arrange delivery)
 
-💰 *Fee: $19 via PayPal (only if we can help)*`
+*What you'll get for $19:*
+A complete recovery plan — how to track your bag in real time, how to claim up to $1,800 in compensation for delayed luggage (yes, really — airlines owe you for essentials), exactly what receipts to keep, and what to do if it's declared lost.
+
+No charge if we can't help.`
   },
 
   hotel: {
     keywords: ['hotel', 'airbnb', 'booking', 'reservation', 'room', 'accommodation', 'check-in', 'overbooked'],
-    response: `🏨 *Hotel/Accommodation Problem*
+    response: `Hotel problems when you're exhausted from traveling — I get it. Let's sort this out.
 
-I can help resolve this! Please tell me:
+*Quick tip:* If they're saying your booking doesn't exist, open your confirmation email and show it at the front desk. Screenshot it now in case you lose signal. If you booked through a third party, call that platform first — they usually have more leverage than you do alone.
 
-1️⃣ Hotel/Airbnb name
-2️⃣ Booking platform (Booking.com, Airbnb, direct, etc.)
-3️⃣ Check-in date
-4️⃣ What's the problem?
-5️⃣ Do you have a confirmation number?
+Tell me what's going on:
 
-I'll help you get a solution or refund.
+1. Hotel or Airbnb name
+2. Where did you book? (Booking.com, Airbnb, direct, etc.)
+3. What's the problem — overbooking, different room, cancellation, won't check you in?
+4. Do you have a confirmation number?
 
-💰 *Fee: $19 via PayPal (only if we can help)*`
+*What you'll get for $19:*
+Your action plan — the exact words to use at the desk, who to escalate to, how to get a free upgrade or alternative stay, and how to get a refund if they can't deliver. We know the policies these platforms don't advertise.
+
+No charge if we can't help.`
   },
 
   visa: {
     keywords: ['visa', 'immigration', 'passport', 'border', 'denied entry', 'customs'],
-    response: `🛂 *Visa/Immigration Issue*
+    response: `Immigration issues are stressful, especially when you're standing there not knowing your rights. Let's figure this out.
 
-This can be stressful. Please share:
+*Important:* Stay calm and be polite with the officers — attitude matters a lot at the border. Don't sign anything you don't fully understand. You have the right to ask for an interpreter.
 
-1️⃣ Your nationality
-2️⃣ Which country are you trying to enter?
-3️⃣ What happened at immigration?
-4️⃣ Do you have a valid visa/travel authorization?
+Tell me your situation:
 
-I'll advise on your options.
+1. Your nationality / passport country
+2. Which country are you trying to enter?
+3. What happened — denied entry, held at border, visa problem?
+4. Do you have a valid visa or travel authorization?
 
-💰 *Fee: $19 via PayPal (only if we can help)*`
+*What you'll get for $19:*
+A clear breakdown of your legal rights at this specific border, exactly what to say to the officers, alternative entry options if you're denied, and embassy/consulate contacts that can help right now.
+
+No charge if we can't help.`
   },
 
   medical: {
     keywords: ['sick', 'hospital', 'doctor', 'medical', 'emergency', 'injured', 'pharmacy', 'medicine'],
-    response: `🏥 *Medical Emergency*
+    response: `*If this is life-threatening, call local emergency services first.* (Google "emergency number" + your country if you don't know it.)
 
-If this is a life-threatening emergency, please call local emergency services first!
+For non-life-threatening situations — I can help you navigate healthcare in a foreign country, which is honestly one of the most confusing things a traveler can face.
 
-For non-urgent medical help, tell me:
+*Quick tip:* If you have travel insurance, call their 24/7 hotline BEFORE going to a hospital — many policies require pre-authorization or they won't cover you. Your policy number is usually in your confirmation email.
 
-1️⃣ Where are you? (city/country)
-2️⃣ What's the medical issue?
-3️⃣ Do you have travel insurance?
+Tell me:
 
-I'll help you find medical care and navigate insurance.
+1. Where are you? (city and country)
+2. What's the medical issue?
+3. Do you have travel insurance?
 
-💰 *Fee: $19 via PayPal (only if we can help)*`
+*What you'll get for $19:*
+Vetted English-speaking doctors/hospitals near you, how to navigate your insurance claim so you actually get reimbursed, what paperwork to collect at the hospital, and pharmacy alternatives if you need medication that's branded differently abroad.
+
+No charge if we can't help.`
   },
 
   scam: {
     keywords: ['scam', 'scammed', 'stolen', 'robbed', 'theft', 'pickpocket', 'fraud'],
-    response: `🚨 *Scam/Theft Report*
+    response: `I'm really sorry this happened to you. Take a deep breath — we've helped people through this many times and there's usually more you can recover than you think.
 
-I'm sorry this happened. Let me help:
+*Do this right now:*
+If cards were stolen → call your bank and freeze them immediately. Most banks have a number on their website you can call collect from abroad. If your passport was taken → don't panic, your embassy can issue an emergency travel document.
 
-1️⃣ Where are you? (city/country)
-2️⃣ What happened?
-3️⃣ What was taken? (passport, money, cards, etc.)
-4️⃣ Have you contacted local police?
+Tell me what happened:
 
-I'll guide you through reporting and recovery.
+1. Where are you? (city and country)
+2. What happened?
+3. What was taken — passport, money, cards, phone?
+4. Have you contacted police yet?
 
-💰 *Fee: $19 via PayPal (only if we can help)*`
+*What you'll get for $19:*
+Your complete recovery plan — local police report process (with translated phrases if needed), embassy contacts and emergency document procedures, how to get emergency cash sent to you, insurance claim steps, and how to secure your accounts and identity.
+
+No charge if we can't help.`
   }
 };
 
 // Greeting/initial response
-const GREETING_RESPONSE = `👋 *Welcome to FixoTrip!*
+const GREETING_RESPONSE = `Hey! Welcome to *FixoTrip* — we help travelers who are stuck, stranded, or stressed.
 
-We help travelers with emergencies 24/7.
+Tell me what's going on and I'll get you sorted:
 
-What's your problem?
-• ✈️ Flight cancelled/delayed
-• 🧳 Lost luggage
-• 🏨 Hotel/Airbnb issue
-• 🛂 Visa/immigration problem
-• 🏥 Medical emergency
-• 🚨 Scam or theft
-• ❓ Other travel problem
+• Flight cancelled or delayed
+• Lost or delayed luggage
+• Hotel or Airbnb nightmare
+• Visa or immigration trouble
+• Need a doctor abroad
+• Got scammed or robbed
+• Something else entirely
 
-Just describe your situation and I'll help!
+Just describe your situation — the more detail the better. I'll give you a quick tip right away, and if you want the full rescue plan it's a $19 flat fee.
 
-💰 *$19 flat fee - you only pay if we can help*`;
+*You only pay if we can actually help. No risk.*`;
 
-// Confirmation after receiving details
-const DETAILS_RECEIVED = `✅ *Got it!*
+// Confirmation after received details
+const DETAILS_RECEIVED = `Got it — thanks for the details.
 
-I'm reviewing your case now. A FixoTrip agent will respond within 5 minutes with a solution.
+I'm pulling together your rescue plan now. A FixoTrip specialist is reviewing your case and will have your personalized action plan ready within a few minutes.
 
-If we can help, I'll send a PayPal link for $19.
-If we can't help your situation, no charge.
-
-Hang tight! 🙏`;
+I'll send you the payment link shortly. Remember — if we look at your situation and can't help, you pay nothing.`;
 
 // Payment instructions
-const PAYMENT_INSTRUCTIONS = `💳 *Payment Instructions*
+const PAYMENT_INSTRUCTIONS = `Your rescue plan is ready.
 
-Pay $19 USD via PayPal:
+To unlock it, pay $19 USD via PayPal:
 👉 https://www.paypal.com/ncp/payment/K8PSJVA9EJL2J
 
-Once payment is confirmed, I'll send your complete rescue plan with:
-• Step-by-step instructions
-• Phone numbers to call
-• What to say
-• Compensation you're entitled to
+*Here's what you'll receive:*
+• Your personalized step-by-step action plan
+• Exact phone numbers to call (tested and working)
+• Word-for-word scripts — what to say to get results
+• Compensation and refunds you're legally owed
+• Plan B and C if the first approach doesn't work
+• Follow-up support until your issue is resolved
 
-Reply "PAID" after payment.`;
+Reply *PAID* once you've completed the payment and I'll send everything right away.`;
 
 // Detect category from message
 function detectCategory(message) {
@@ -258,11 +272,11 @@ app.post('/webhook', async (req, res) => {
 
     // Handle based on conversation state
     if (isPaymentConfirmation(message)) {
-      response = `✅ *Thank you!*
+      response = `*Thank you!* Payment received.
 
-I'm checking your payment now. Once confirmed, I'll send your complete rescue plan within 10 minutes.
+I'm finalizing your personalized rescue plan now. You'll have it in your hands within 10 minutes — with every step laid out so you know exactly what to do next.
 
-If you have any additional details about your situation, feel free to share them now.`;
+While I prepare it — is there anything else about your situation I should know? Any update helps me make the plan more specific to you.`;
       convo.state = 'paid';
       await notifyAdmin(sender, 'PAYMENT CONFIRMATION: ' + message, convo.category);
 
@@ -286,22 +300,22 @@ If you have any additional details about your situation, feel free to share them
         await notifyAdmin(sender, message, 'Other');
       } else {
         // Ask for more details
-        response = `I want to help! Could you tell me more about your travel emergency?
+        response = `I want to make sure I give you the right help. Could you tell me a bit more?
 
 For example:
-- What happened?
-- Where are you now?
-- When did this happen?
+- What exactly happened?
+- Where are you right now?
+- Is there a deadline or time pressure?
 
-The more details you share, the faster I can help.`;
+The more specific you are, the more useful your rescue plan will be.`;
       }
 
     } else if (convo.state === 'details_received') {
       // Already received details, they're adding more info
       if (hasEnoughDetails(message)) {
-        response = `Thanks for the additional details!
+        response = `Thanks — that's really helpful. I'm adding this to your case now.
 
-A FixoTrip agent is reviewing your case and will respond within 5 minutes.`;
+A FixoTrip specialist is putting together your action plan. You'll hear back within a few minutes.`;
         await notifyAdmin(sender, 'ADDITIONAL INFO: ' + message, convo.category);
       } else {
         response = PAYMENT_INSTRUCTIONS;
@@ -309,11 +323,11 @@ A FixoTrip agent is reviewing your case and will respond within 5 minutes.`;
       }
 
     } else if (convo.state === 'awaiting_payment') {
-      response = `I'm still waiting for your payment to proceed.
+      response = `Just checking in — your rescue plan is ready and waiting. Once you complete the $19 payment, I'll send it right over.
 
-${PAYMENT_INSTRUCTIONS}
+👉 https://www.paypal.com/ncp/payment/K8PSJVA9EJL2J
 
-Or if you have more details to share, please send them.`;
+Reply *PAID* when done. And remember — if your situation changes or you have more details, just send them over.`;
     }
 
     // Save conversation state
