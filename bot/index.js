@@ -1,211 +1,229 @@
 const express = require('express');
 const axios = require('axios');
+const OpenAI = require('openai');
 require('dotenv').config();
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Fonnte API config
+// Config
 const FONNTE_TOKEN = process.env.FONNTE_TOKEN;
 const FONNTE_API = 'https://api.fonnte.com/send';
+const PAYPAL_LINK = 'https://www.paypal.com/ncp/payment/K8PSJVA9EJL2J';
 
-// Store conversation states (use Redis in production)
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Store conversations: sender -> { messages: [], state, lastMessage }
 const conversations = new Map();
 
-// Problem categories and responses
-const CATEGORIES = {
-  flight: {
-    keywords: ['flight', 'cancelled', 'canceled', 'delayed', 'airline', 'boarding', 'missed flight', 'connection', 'layover', 'airport'],
-    response: `Ugh, flight problems are the worst — but you're in the right place. We deal with these every single day.
+// System prompt — the brain of the bot
+const SYSTEM_PROMPT = `You are a FixoTrip travel emergency specialist on WhatsApp. You help travelers who are stuck, stranded, or stressed — 24/7 worldwide.
 
-*Quick tip while we get started:* Go to your airline's service desk NOW and ask to be rebooked on the next available flight. Don't wait in the phone queue — the desk is almost always faster.
+## Your personality
+- Warm, calm, and confident — like a knowledgeable friend who's handled this 100 times
+- Empathetic but action-oriented — acknowledge their stress, then immediately help
+- Direct and concise — this is WhatsApp, not email. Keep messages short and scannable
+- Use *bold* for emphasis (WhatsApp formatting). Never use markdown headers or bullet points with dashes — use • instead
 
-To build your rescue plan, I need a few details:
+## Your knowledge
+You are an expert in:
+- Airline passenger rights: EU261 (Europe), DOT rules (US), Montreal Convention (international)
+- Lost luggage claims, PIR filing, compensation amounts
+- Hotel overbooking rights, platform dispute processes (Booking.com, Airbnb, Expedia)
+- Visa and immigration procedures, emergency travel documents
+- Travel insurance claims, medical emergencies abroad
+- Scam recovery, police reports abroad, embassy services
+- General travel problem-solving across 190+ countries
 
-1. Airline name
-2. Flight number
-3. What happened — cancelled, delayed, denied boarding?
-4. Where are you right now?
+## Conversation flow
 
-*What you'll get for $19:*
-Your personal step-by-step action plan — exactly what to say at the desk, which phone numbers to call, what compensation you're legally owed (most people don't claim this), and a Plan B if the first option falls through.
+### Phase 1: Greeting & Problem Detection
+When someone first messages:
+- Greet them warmly and ask what's going on
+- If they describe a problem, immediately give ONE free actionable tip to build trust
+- This free tip should be specific and genuinely useful — show you know your stuff
 
-No charge if we can't help your situation.`
+### Phase 2: Detail Collection
+Ask for the specific details you need to build their rescue plan. Adapt your questions to their specific problem — don't use a generic form. Key details to collect:
+- What exactly happened
+- Where they are (city/country/airport)
+- Airline/hotel/service provider names
+- Flight numbers, booking references, dates
+- What they've already tried
+- Any time pressure or deadlines
+
+Keep asking naturally until you have enough to build a real plan. Don't rush to payment.
+
+### Phase 3: Payment
+Once you have enough details, tell them their rescue plan is ready and share the payment link. Frame it as:
+- Here's what you'll get (be specific to THEIR situation, not generic)
+- $19 flat fee
+- No charge if we can't help
+- Payment link: ${PAYPAL_LINK}
+
+### Phase 4: After Payment
+When they confirm payment (say "paid", "done", "sent", etc.):
+- Thank them
+- Tell them the plan is being finalized
+- Internally: generate their rescue plan (the admin will review and send it)
+
+### Phase 5: Rescue Plan Generation
+When asked to generate a rescue plan (via function call), create a comprehensive, personalized action plan with:
+- Step-by-step instructions in priority order
+- Exact phone numbers and contact info
+- Word-for-word scripts for what to say
+- Legal rights and compensation they're owed (cite specific regulations)
+- Plan B and C if the first approach doesn't work
+- Deadlines for filing claims
+- What receipts/documents to keep
+
+## Important rules
+- NEVER make up phone numbers or specific contact details you're not sure about — say "I'll include verified contact info in your plan"
+- NEVER give dangerous medical or legal advice — always caveat with "consult a professional"
+- If someone has a life-threatening emergency, tell them to call local emergency services FIRST
+- Keep WhatsApp messages under 300 words — break into multiple messages if needed
+- Respond in whatever language the customer uses
+- Don't be pushy about payment — let them ask questions first
+- If you genuinely can't help their situation, say so honestly — don't upsell`;
+
+// Function definitions for OpenAI
+const tools = [
+  {
+    type: 'function',
+    function: {
+      name: 'send_payment_link',
+      description: 'Send the payment link to the customer. Call this when you have collected enough details about their problem and are ready to offer the rescue plan.',
+      parameters: {
+        type: 'object',
+        properties: {
+          summary: {
+            type: 'string',
+            description: 'Brief summary of the customer problem for admin notification'
+          },
+          category: {
+            type: 'string',
+            enum: ['flight', 'luggage', 'hotel', 'visa', 'medical', 'scam', 'other'],
+            description: 'Problem category'
+          }
+        },
+        required: ['summary', 'category']
+      }
+    }
   },
-
-  luggage: {
-    keywords: ['luggage', 'baggage', 'bag', 'lost', 'delayed bag', 'suitcase', 'missing luggage'],
-    response: `That's so frustrating — but don't worry, most "lost" bags are actually just delayed and show up within 48 hours.
-
-*Do this right now if you haven't:* Go to your airline's baggage desk (before leaving the airport!) and file a PIR — Property Irregularity Report. This is your proof for compensation later. No PIR = much harder to claim.
-
-To get your full rescue plan, tell me:
-
-1. Which airline?
-2. Flight number
-3. Did you already file a PIR?
-4. Where are you staying? (so we can arrange delivery)
-
-*What you'll get for $19:*
-A complete recovery plan — how to track your bag in real time, how to claim up to $1,800 in compensation for delayed luggage (yes, really — airlines owe you for essentials), exactly what receipts to keep, and what to do if it's declared lost.
-
-No charge if we can't help.`
-  },
-
-  hotel: {
-    keywords: ['hotel', 'airbnb', 'booking', 'reservation', 'room', 'accommodation', 'check-in', 'overbooked'],
-    response: `Hotel problems when you're exhausted from traveling — I get it. Let's sort this out.
-
-*Quick tip:* If they're saying your booking doesn't exist, open your confirmation email and show it at the front desk. Screenshot it now in case you lose signal. If you booked through a third party, call that platform first — they usually have more leverage than you do alone.
-
-Tell me what's going on:
-
-1. Hotel or Airbnb name
-2. Where did you book? (Booking.com, Airbnb, direct, etc.)
-3. What's the problem — overbooking, different room, cancellation, won't check you in?
-4. Do you have a confirmation number?
-
-*What you'll get for $19:*
-Your action plan — the exact words to use at the desk, who to escalate to, how to get a free upgrade or alternative stay, and how to get a refund if they can't deliver. We know the policies these platforms don't advertise.
-
-No charge if we can't help.`
-  },
-
-  visa: {
-    keywords: ['visa', 'immigration', 'passport', 'border', 'denied entry', 'customs'],
-    response: `Immigration issues are stressful, especially when you're standing there not knowing your rights. Let's figure this out.
-
-*Important:* Stay calm and be polite with the officers — attitude matters a lot at the border. Don't sign anything you don't fully understand. You have the right to ask for an interpreter.
-
-Tell me your situation:
-
-1. Your nationality / passport country
-2. Which country are you trying to enter?
-3. What happened — denied entry, held at border, visa problem?
-4. Do you have a valid visa or travel authorization?
-
-*What you'll get for $19:*
-A clear breakdown of your legal rights at this specific border, exactly what to say to the officers, alternative entry options if you're denied, and embassy/consulate contacts that can help right now.
-
-No charge if we can't help.`
-  },
-
-  medical: {
-    keywords: ['sick', 'hospital', 'doctor', 'medical', 'emergency', 'injured', 'pharmacy', 'medicine'],
-    response: `*If this is life-threatening, call local emergency services first.* (Google "emergency number" + your country if you don't know it.)
-
-For non-life-threatening situations — I can help you navigate healthcare in a foreign country, which is honestly one of the most confusing things a traveler can face.
-
-*Quick tip:* If you have travel insurance, call their 24/7 hotline BEFORE going to a hospital — many policies require pre-authorization or they won't cover you. Your policy number is usually in your confirmation email.
-
-Tell me:
-
-1. Where are you? (city and country)
-2. What's the medical issue?
-3. Do you have travel insurance?
-
-*What you'll get for $19:*
-Vetted English-speaking doctors/hospitals near you, how to navigate your insurance claim so you actually get reimbursed, what paperwork to collect at the hospital, and pharmacy alternatives if you need medication that's branded differently abroad.
-
-No charge if we can't help.`
-  },
-
-  scam: {
-    keywords: ['scam', 'scammed', 'stolen', 'robbed', 'theft', 'pickpocket', 'fraud'],
-    response: `I'm really sorry this happened to you. Take a deep breath — we've helped people through this many times and there's usually more you can recover than you think.
-
-*Do this right now:*
-If cards were stolen → call your bank and freeze them immediately. Most banks have a number on their website you can call collect from abroad. If your passport was taken → don't panic, your embassy can issue an emergency travel document.
-
-Tell me what happened:
-
-1. Where are you? (city and country)
-2. What happened?
-3. What was taken — passport, money, cards, phone?
-4. Have you contacted police yet?
-
-*What you'll get for $19:*
-Your complete recovery plan — local police report process (with translated phrases if needed), embassy contacts and emergency document procedures, how to get emergency cash sent to you, insurance claim steps, and how to secure your accounts and identity.
-
-No charge if we can't help.`
-  }
-};
-
-// Greeting/initial response
-const GREETING_RESPONSE = `Hey! Welcome to *FixoTrip* — we help travelers who are stuck, stranded, or stressed.
-
-Tell me what's going on and I'll get you sorted:
-
-• Flight cancelled or delayed
-• Lost or delayed luggage
-• Hotel or Airbnb nightmare
-• Visa or immigration trouble
-• Need a doctor abroad
-• Got scammed or robbed
-• Something else entirely
-
-Just describe your situation — the more detail the better. I'll give you a quick tip right away, and if you want the full rescue plan it's a $19 flat fee.
-
-*You only pay if we can actually help. No risk.*`;
-
-// Confirmation after received details
-const DETAILS_RECEIVED = `Got it — thanks for the details.
-
-I'm pulling together your rescue plan now. A FixoTrip specialist is reviewing your case and will have your personalized action plan ready within a few minutes.
-
-I'll send you the payment link shortly. Remember — if we look at your situation and can't help, you pay nothing.`;
-
-// Payment instructions
-const PAYMENT_INSTRUCTIONS = `Your rescue plan is ready.
-
-To unlock it, pay $19 USD via PayPal:
-👉 https://www.paypal.com/ncp/payment/K8PSJVA9EJL2J
-
-*Here's what you'll receive:*
-• Your personalized step-by-step action plan
-• Exact phone numbers to call (tested and working)
-• Word-for-word scripts — what to say to get results
-• Compensation and refunds you're legally owed
-• Plan B and C if the first approach doesn't work
-• Follow-up support until your issue is resolved
-
-Reply *PAID* once you've completed the payment and I'll send everything right away.`;
-
-// Detect category from message
-function detectCategory(message) {
-  const lowerMessage = message.toLowerCase();
-
-  for (const [category, data] of Object.entries(CATEGORIES)) {
-    for (const keyword of data.keywords) {
-      if (lowerMessage.includes(keyword)) {
-        return category;
+  {
+    type: 'function',
+    function: {
+      name: 'notify_payment_received',
+      description: 'Notify admin that payment was received and include a draft rescue plan. Call this when the customer confirms they have paid.',
+      parameters: {
+        type: 'object',
+        properties: {
+          rescue_plan: {
+            type: 'string',
+            description: 'The full personalized rescue plan to send to the customer. Include step-by-step instructions, phone numbers, scripts, legal rights, and backup plans.'
+          },
+          summary: {
+            type: 'string',
+            description: 'Brief summary for admin'
+          }
+        },
+        required: ['rescue_plan', 'summary']
       }
     }
   }
-  return null;
-}
+];
 
-// Check if message contains enough details
-function hasEnoughDetails(message) {
-  // Simple heuristic: message is long enough and contains some specifics
-  return message.length > 100 ||
-    (message.match(/\d+/g) || []).length >= 2 || // Has numbers (flight numbers, dates)
-    message.includes('from') ||
-    message.includes('to');
-}
+// Get AI response for a conversation
+async function getAIResponse(sender, userMessage) {
+  let convo = conversations.get(sender);
+  if (!convo) {
+    convo = {
+      messages: [],
+      state: 'active',
+      lastMessage: Date.now()
+    };
+    conversations.set(sender, convo);
+  }
 
-// Check if it's a greeting
-function isGreeting(message) {
-  const greetings = ['hi', 'hello', 'hey', 'help', 'halo', 'hai', 'hola', 'start', 'menu'];
-  const lowerMessage = message.toLowerCase().trim();
-  return greetings.some(g => lowerMessage === g || lowerMessage.startsWith(g + ' ') || lowerMessage.startsWith(g + ','));
-}
+  convo.messages.push({ role: 'user', content: userMessage });
+  convo.lastMessage = Date.now();
 
-// Check if confirming payment
-function isPaymentConfirmation(message) {
-  const confirmations = ['paid', 'done', 'sent', 'transferred', 'sudah bayar', 'sudah transfer'];
-  return confirmations.some(c => message.toLowerCase().includes(c));
+  // Keep conversation history manageable (last 20 messages)
+  if (convo.messages.length > 20) {
+    convo.messages = convo.messages.slice(-20);
+  }
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        ...convo.messages
+      ],
+      tools: tools,
+      max_tokens: 500,
+      temperature: 0.7
+    });
+
+    const choice = completion.choices[0];
+    const assistantMessage = choice.message;
+
+    // Store assistant message in history
+    convo.messages.push(assistantMessage);
+
+    // Handle function calls
+    if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+      const results = [];
+
+      for (const toolCall of assistantMessage.tool_calls) {
+        const args = JSON.parse(toolCall.function.arguments);
+
+        if (toolCall.function.name === 'send_payment_link') {
+          await notifyAdmin(sender, `NEW CASE (${args.category}): ${args.summary}`, args.category);
+          convo.messages.push({
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            content: 'Payment link context ready. Include the payment link in your response.'
+          });
+
+        } else if (toolCall.function.name === 'notify_payment_received') {
+          await notifyAdmin(
+            sender,
+            `PAID — ${args.summary}\n\n*Draft Rescue Plan:*\n${args.rescue_plan}`,
+            'paid'
+          );
+          convo.messages.push({
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            content: 'Admin notified with rescue plan draft. Confirm to customer that plan is being finalized.'
+          });
+        }
+      }
+
+      // Get follow-up response after function calls
+      const followUp = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...convo.messages
+        ],
+        max_tokens: 500,
+        temperature: 0.7
+      });
+
+      const followUpMessage = followUp.choices[0].message;
+      convo.messages.push(followUpMessage);
+      return followUpMessage.content;
+    }
+
+    return assistantMessage.content;
+
+  } catch (error) {
+    console.error('OpenAI error:', error.message);
+    // Fallback response
+    return `Thanks for your message! I'm having a brief technical issue but a FixoTrip specialist will get back to you shortly. Please share as many details as you can about your situation in the meantime.`;
+  }
 }
 
 // Send message via Fonnte
@@ -214,7 +232,7 @@ async function sendMessage(to, message) {
     const response = await axios.post(FONNTE_API, {
       target: to,
       message: message,
-      countryCode: '62' // Default to Indonesia, adjust as needed
+      countryCode: '62'
     }, {
       headers: {
         'Authorization': FONNTE_TOKEN
@@ -229,18 +247,17 @@ async function sendMessage(to, message) {
   }
 }
 
-// Notify admin of new case
+// Notify admin
 async function notifyAdmin(sender, message, category) {
   const adminNumber = process.env.ADMIN_PHONE;
   if (!adminNumber) return;
 
-  const notification = `🆘 *New FixoTrip Case*
+  const notification = `*FixoTrip Case*
 
 From: ${sender}
-Category: ${category || 'Uncategorized'}
-Message: ${message.substring(0, 200)}${message.length > 200 ? '...' : ''}
+Category: ${category || 'Unknown'}
 
-Reply to this customer in WhatsApp.`;
+${message.substring(0, 1000)}${message.length > 1000 ? '...' : ''}`;
 
   await sendMessage(adminNumber, notification);
 }
@@ -248,90 +265,22 @@ Reply to this customer in WhatsApp.`;
 // Main webhook handler
 app.post('/webhook', async (req, res) => {
   try {
-    const { sender, message, device } = req.body;
+    const { sender, message } = req.body;
 
-    // Ignore if no message or sender
     if (!sender || !message) {
       return res.status(200).json({ status: 'ignored' });
     }
 
-    console.log(`Received from ${sender}: ${message}`);
-
-    // Get or create conversation state
-    let convo = conversations.get(sender) || {
-      state: 'new',
-      category: null,
-      messageCount: 0,
-      lastMessage: Date.now()
-    };
-
-    convo.messageCount++;
-    convo.lastMessage = Date.now();
-
-    let response;
-
-    // Handle based on conversation state
-    if (isPaymentConfirmation(message)) {
-      response = `*Thank you!* Payment received.
-
-I'm finalizing your personalized rescue plan now. You'll have it in your hands within 10 minutes — with every step laid out so you know exactly what to do next.
-
-While I prepare it — is there anything else about your situation I should know? Any update helps me make the plan more specific to you.`;
-      convo.state = 'paid';
-      await notifyAdmin(sender, 'PAYMENT CONFIRMATION: ' + message, convo.category);
-
-    } else if (isGreeting(message) || convo.state === 'new') {
-      // New conversation or greeting
-      response = GREETING_RESPONSE;
-      convo.state = 'greeted';
-
-    } else if (convo.state === 'greeted' || convo.state === 'categorized') {
-      // Try to categorize the problem
-      const category = detectCategory(message);
-
-      if (category) {
-        convo.category = category;
-        convo.state = 'categorized';
-        response = CATEGORIES[category].response;
-      } else if (hasEnoughDetails(message)) {
-        // Has details but unclear category
-        response = DETAILS_RECEIVED;
-        convo.state = 'details_received';
-        await notifyAdmin(sender, message, 'Other');
-      } else {
-        // Ask for more details
-        response = `I want to make sure I give you the right help. Could you tell me a bit more?
-
-For example:
-- What exactly happened?
-- Where are you right now?
-- Is there a deadline or time pressure?
-
-The more specific you are, the more useful your rescue plan will be.`;
-      }
-
-    } else if (convo.state === 'details_received') {
-      // Already received details, they're adding more info
-      if (hasEnoughDetails(message)) {
-        response = `Thanks — that's really helpful. I'm adding this to your case now.
-
-A FixoTrip specialist is putting together your action plan. You'll hear back within a few minutes.`;
-        await notifyAdmin(sender, 'ADDITIONAL INFO: ' + message, convo.category);
-      } else {
-        response = PAYMENT_INSTRUCTIONS;
-        convo.state = 'awaiting_payment';
-      }
-
-    } else if (convo.state === 'awaiting_payment') {
-      response = `Just checking in — your rescue plan is ready and waiting. Once you complete the $19 payment, I'll send it right over.
-
-👉 https://www.paypal.com/ncp/payment/K8PSJVA9EJL2J
-
-Reply *PAID* when done. And remember — if your situation changes or you have more details, just send them over.`;
+    // Ignore messages from admin number to prevent loops
+    const adminNumber = process.env.ADMIN_PHONE;
+    if (adminNumber && sender.includes(adminNumber.replace(/^62/, ''))) {
+      return res.status(200).json({ status: 'ignored_admin' });
     }
 
-    // Save conversation state
-    conversations.set(sender, convo);
+    console.log(`Received from ${sender}: ${message}`);
+
+    // Get AI response
+    const response = await getAIResponse(sender, message);
 
     // Send response
     if (response) {
@@ -346,23 +295,23 @@ Reply *PAID* when done. And remember — if your situation changes or you have m
   }
 });
 
-// Health check endpoint
+// Health check
 app.get('/', (req, res) => {
   res.json({
-    status: 'FixoTrip Bot Running',
+    status: 'FixoTrip Bot Running (AI)',
     conversations: conversations.size
   });
 });
 
-// Clean up old conversations (run periodically)
+// Clean up old conversations every hour
 setInterval(() => {
-  const oneHourAgo = Date.now() - (60 * 60 * 1000);
+  const twoHoursAgo = Date.now() - (2 * 60 * 60 * 1000);
   for (const [sender, convo] of conversations) {
-    if (convo.lastMessage < oneHourAgo) {
+    if (convo.lastMessage < twoHoursAgo) {
       conversations.delete(sender);
     }
   }
-}, 60 * 60 * 1000); // Every hour
+}, 60 * 60 * 1000);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
