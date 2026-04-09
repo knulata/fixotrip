@@ -15,7 +15,13 @@ const PAYPAL_LINK = 'https://www.paypal.com/ncp/payment/K8PSJVA9EJL2J';
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Store conversations: sender -> { messages: [], state, lastMessage }
+// TODO: move to Postgres before scaling past ~1k users.
 const conversations = new Map();
+
+// Watched trips: sender -> array of { id, flightNumber, date, route, status, lastChecked, createdAt }
+// TODO: move to Postgres. In-memory means watches are lost on every cold start.
+const trips = new Map();
+let nextTripId = 1;
 
 // System prompt — the brain of the bot
 const SYSTEM_PROMPT = `You are a FixoTrip travel emergency specialist on WhatsApp. You help travelers who are stuck, stranded, or stressed — 24/7 worldwide.
@@ -36,13 +42,25 @@ You are an expert in:
 - Scam recovery, police reports abroad, embassy services
 - General travel problem-solving across 190+ countries
 
+## Two products
+
+FixoTrip offers two services, and you should match the user to the right one:
+
+1. **Watch My Trip — FREE forever.** We monitor a user's flight 24/7 and ping them on WhatsApp the moment anything changes (delay, gate change, cancellation). No app, no signup. Use the \`start_watching_trip\` tool whenever a user wants you to watch a flight, expresses pre-trip anxiety, or forwards an airline confirmation. Always favor offering this when a user has an upcoming trip — it's free, it builds trust, and it's the wedge into the paid product.
+
+2. **Emergency Help — $19 flat fee.** If a user is already stuck (cancelled, delayed, lost luggage, denied boarding, etc.), help them with the existing rescue-plan flow.
+
+When a watched flight is auto-detected as cancelled by our poller, the user will message you and you should immediately move them into the paid Emergency Help flow — they already know us and trust us.
+
 ## Conversation flow
 
 ### Phase 1: Greeting & Problem Detection
 When someone first messages:
 - Greet them warmly and ask what's going on
+- Mention BOTH options briefly: free flight monitoring OR paid emergency help
 - If they describe a problem, immediately give ONE free actionable tip to build trust
 - This free tip should be specific and genuinely useful — show you know your stuff
+- If they have an UPCOMING trip (not yet broken), offer to watch it for free via \`start_watching_trip\`
 
 ### Phase 2: Detail Collection
 Ask for the specific details you need to build their rescue plan. Adapt your questions to their specific problem — don't use a generic form. Key details to collect:
@@ -89,6 +107,31 @@ When asked to generate a rescue plan (via function call), create a comprehensive
 
 // Function definitions for OpenAI
 const tools = [
+  {
+    type: 'function',
+    function: {
+      name: 'start_watching_trip',
+      description: 'Start monitoring a user\'s flight for free. Call this whenever a user asks you to watch/monitor/track a flight, forwards an airline confirmation, or expresses pre-trip anxiety. Free forever — always offer it before pushing the paid product.',
+      parameters: {
+        type: 'object',
+        properties: {
+          flight_number: {
+            type: 'string',
+            description: 'IATA flight code with no spaces, e.g. "GA820", "QZ250", "UA123". If the user gave airline name only, use your knowledge to map it (e.g. "Garuda 820" → "GA820").'
+          },
+          date: {
+            type: 'string',
+            description: 'Departure date in ISO format YYYY-MM-DD. Resolve relative dates ("tomorrow", "next Tuesday") to absolute dates using the current date.'
+          },
+          route: {
+            type: 'string',
+            description: 'Optional route as IATA codes, e.g. "CGK-DPS" or "JFK-LHR". Omit if unknown.'
+          }
+        },
+        required: ['flight_number', 'date']
+      }
+    }
+  },
   {
     type: 'function',
     function: {
@@ -179,7 +222,20 @@ async function getAIResponse(sender, userMessage) {
       for (const toolCall of assistantMessage.tool_calls) {
         const args = JSON.parse(toolCall.function.arguments);
 
-        if (toolCall.function.name === 'send_payment_link') {
+        if (toolCall.function.name === 'start_watching_trip') {
+          const trip = saveWatchedTrip(sender, args.flight_number, args.date, args.route);
+          await notifyAdmin(
+            sender,
+            `New watch: ${trip.flightNumber} on ${trip.date}${trip.route ? ` (${trip.route})` : ''}`,
+            'watch'
+          );
+          convo.messages.push({
+            role: 'tool',
+            tool_call_id: toolCall.id,
+            content: `Trip saved. id=${trip.id}, flight=${trip.flightNumber}, date=${trip.date}. Confirm to the user that we're now watching their trip 24/7 for free, will WhatsApp them on any change (delay, gate change, cancellation), and remind them they can also reach out anytime if something goes wrong before then.`
+          });
+
+        } else if (toolCall.function.name === 'send_payment_link') {
           await notifyAdmin(sender, `NEW CASE (${args.category}): ${args.summary}`, args.category);
           convo.messages.push({
             role: 'tool',
@@ -262,6 +318,88 @@ ${message.substring(0, 1000)}${message.length > 1000 ? '...' : ''}`;
   await sendMessage(adminNumber, notification);
 }
 
+// --- Free trip monitoring ---
+
+function saveWatchedTrip(sender, flightNumber, date, route) {
+  const trip = {
+    id: nextTripId++,
+    sender,
+    flightNumber: String(flightNumber || '').toUpperCase().replace(/\s+/g, ''),
+    date,
+    route: route || null,
+    status: 'scheduled',
+    lastChecked: null,
+    createdAt: Date.now()
+  };
+  const list = trips.get(sender) || [];
+  list.push(trip);
+  trips.set(sender, list);
+  return trip;
+}
+
+// Stub: returns null if AVIATIONSTACK_KEY not set, else queries AviationStack.
+async function checkFlightStatus(flightNumber, date) {
+  const key = process.env.AVIATIONSTACK_KEY;
+  if (!key) {
+    console.log(`[flight-status] stub: would check ${flightNumber} on ${date}`);
+    return null;
+  }
+  try {
+    const res = await axios.get('http://api.aviationstack.com/v1/flights', {
+      params: { access_key: key, flight_iata: flightNumber, flight_date: date },
+      timeout: 10000
+    });
+    const flight = res.data?.data?.[0];
+    if (!flight) return null;
+    return {
+      status: flight.flight_status, // scheduled | active | landed | cancelled | incident | diverted
+      departure: flight.departure,
+      arrival: flight.arrival
+    };
+  } catch (err) {
+    console.error('[flight-status] error:', err.message);
+    return null;
+  }
+}
+
+async function pollWatchedTrips() {
+  const today = new Date().toISOString().slice(0, 10);
+  for (const [sender, list] of trips) {
+    for (const trip of list) {
+      if (trip.date < today) continue; // past trip
+      if (['cancelled-notified', 'expired'].includes(trip.status)) continue;
+
+      const result = await checkFlightStatus(trip.flightNumber, trip.date);
+      trip.lastChecked = Date.now();
+      if (!result) continue;
+
+      const prevStatus = trip.status;
+      trip.status = result.status;
+
+      // Auto-notify on cancellation. We feed it through the LLM bot so the
+      // language and tone match the existing conversation context.
+      if (result.status === 'cancelled' && prevStatus !== 'cancelled') {
+        const trigger = `[SYSTEM] FixoTrip's flight monitor just detected that flight ${trip.flightNumber} on ${trip.date} (which this user asked us to watch) has been CANCELLED by the airline. Tell them right away in their language, with empathy. Offer the paid Emergency Help flow ($19) — finding a replacement flight, scripts for the airline counter, EU261/Montreal compensation claim. Do NOT include the payment link yet — first ask if they want help, then collect a few details, then call send_payment_link.`;
+        try {
+          const reply = await getAIResponse(sender, trigger);
+          if (reply) await sendMessage(sender, reply);
+        } catch (err) {
+          console.error('[poller] LLM notify failed:', err.message);
+        }
+        trip.status = 'cancelled-notified';
+        await notifyAdmin(sender, `Auto-detected cancellation: ${trip.flightNumber} ${trip.date}`, 'flight');
+      }
+    }
+  }
+}
+
+// Run the poller every 15 minutes on long-running hosts (Railway/Render/Fly).
+// On Vercel serverless, disable this and hit POST /poll from external cron instead.
+const POLL_INTERVAL_MS = 15 * 60 * 1000;
+setInterval(() => {
+  pollWatchedTrips().catch(err => console.error('[poller] error:', err));
+}, POLL_INTERVAL_MS);
+
 // Main webhook handler
 app.post('/webhook', async (req, res) => {
   try {
@@ -297,10 +435,28 @@ app.post('/webhook', async (req, res) => {
 
 // Health check
 app.get('/', (req, res) => {
+  let tripCount = 0;
+  for (const list of trips.values()) tripCount += list.length;
   res.json({
     status: 'FixoTrip Bot Running (AI)',
-    conversations: conversations.size
+    conversations: conversations.size,
+    watchedTrips: tripCount
   });
+});
+
+// Manual poll trigger — for serverless cron (Vercel Cron, GH Actions, cron-job.org).
+// Set POLL_SECRET in env and pass it as `x-poll-secret` header.
+app.post('/poll', async (req, res) => {
+  const secret = process.env.POLL_SECRET;
+  if (secret && req.headers['x-poll-secret'] !== secret) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+  try {
+    await pollWatchedTrips();
+    res.json({ status: 'ok' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Clean up old conversations every hour
